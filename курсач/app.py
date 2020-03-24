@@ -1,24 +1,33 @@
 import sys
 from PyQt5.uic.properties import QtWidgets
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import pyqtSignal, QObject, QTimer
-from PyQt5.QtWidgets import QTableWidgetItem
+# from PyQt5.QtCore import pyqtSignal, QObject, QTimer
+# from PyQt5.QtWidgets import QTableWidgetItem
 import const
 import ui
 import time
 import random
+from threading import Thread
+import json 
+
+
 # import bluetooth
-#
+
+# target_name = "SmartHome"
+# addr = "AB:68:32:57:34:02"
+# target_address = addr
+# port = 1
 # sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-# sock.connect(("SmartHome", 1))
-import PyQt5.QtBluetooth as bl
+# sock.connect((addr, port))
+
 
 class Window(QtWidgets.QMainWindow, ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.build_handlers()
-        
+        # getTempThread = Thread(target=getTempFromRooms, args=(1,), daemon=True)
+
 
     def build_handlers(self):
         self.pushButton.clicked.connect(self.pushButtonClick)
@@ -26,23 +35,31 @@ class Window(QtWidgets.QMainWindow, ui.Ui_MainWindow):
 
 
     def tempUpdate(self):
-        #answer = getTempFromRooms()
+        # answer = getTempFromRooms(sock,tempDict)
         answer = [random.randrange(-25,25) for i in range(5)]
         print(answer)
         for i in range(len(answer)):
-            item = QTableWidgetItem(str(answer[i]))
+            item = QtWidgets.QTableWidgetItem(str(answer[i]))
             item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.tableWidget.setItem(i,0,item)
         
     def sliderMove(self):
         self.tempValue.setText(str(self.tempSlider.value()))
         
-    def pushButtonClick(self):
-        room = const.rooms[self.roomBox.currentText()]
-        t = self.tempSlider.value()
-        
+    # def pushButtonClick(self):
+    #     room = const.rooms[self.roomBox.currentText()]
+    #     t = self.tempSlider.value()
 
-def getTempFromRooms(sock,tempDict:dict):
+def setTempRoom(sock, room, command):
+    try:
+        sock.send(command)
+        response = sock.recv(room)
+        answer = response.decode('utf-8')
+        return answer.split('#')[1:6]
+    except Exception: 
+        return None
+
+def getTempFromRooms(sock,tempDict):
     command = "YT0\r\n"
     try:
         sock.send(command)
@@ -81,13 +98,15 @@ def funControl(t_old, t_now, t_need, power):#return UP DOWN STOP
         return power-1
     elif neuron_stop>0:
         return power
-    # return neuron_up, neuron_down, neuron_stop           
+    # return neuron_up, neuron_down, neuron_stop   
+    # 
 
+        
 def main():
     app = QtWidgets.QApplication(sys.argv)
     window = Window()
     window.show()
-    timer = QTimer()
+    timer = QtCore.QTimer()
     timer.timeout.connect(window.tempUpdate)
     timer.start(2000)
     app.exec_()
